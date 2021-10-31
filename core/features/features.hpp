@@ -19,16 +19,17 @@ namespace visuals {
 		void recoil_crosshair_draw();
 		void spectator_list_draw();
 		void modulateworld();
+		void fovarrows(player_t* player);
 	}
 }
 
 namespace misc {
 	namespace movement {
 		void bunny_hop(c_usercmd* cmd);
+		void blockbot(c_usercmd* cmd);
 	};
 	void thirdperson();
 	void nade_prediction();
-	bool rcs();
 }
 
 extern int showtime;

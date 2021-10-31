@@ -75,6 +75,27 @@ void render::draw_textured_polygon(std::int32_t vertices_count, vertex_t* vertic
 	interfaces::surface->draw_polygon(vertices_count, vertices);
 }
 
+void render::draw_arc(int x, int y, int radius, int start_angle, int percent, int thickness, color color) {
+	float precision = (2 * math::pi) / 30;
+	float step = math::pi / 180;
+	float inner = radius - thickness;
+	float end_angle = (start_angle + percent) * step;
+	float start_angle1337 = (start_angle * math::pi) / 180;
+
+	for (; radius > inner; --radius) {
+		for (float angle = start_angle1337; angle < end_angle; angle += precision) {
+			float cx = round(x + radius * cos(angle));
+			float cy = round(y + radius * sin(angle));
+
+			float cx2 = round(x + radius * cos(angle + precision));
+			float cy2 = round(y + radius * sin(angle + precision));
+
+			interfaces::surface->set_drawing_color(color.r, color.g, color.b, color.a);
+			interfaces::surface->draw_line(cx, cy, cx2, cy2);
+		}
+	}
+}
+
 void render::draw_circle(std::int32_t x, std::int32_t y, std::int32_t radius, std::int32_t segments, color color) {
 	float step = M_PI * 2.0 / segments;
 	for (float a = 0; a < (M_PI * 2.0); a += step) {

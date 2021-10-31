@@ -4,7 +4,7 @@ RECT get_bbox(player_t* player) {
 	RECT box;
 	vec3_t bottom, top;
 
-	math::world_to_screen(player->abs_origin() - vec3_t(0, 0, 8), bottom); // vecorigin to absorigin for no lag in esp
+	math::world_to_screen(player->abs_origin() - vec3_t(0, 0, 8), bottom);
 	math::world_to_screen(player->get_hitbox_position(hitboxes::hitbox_head) + vec3_t(0, 0, 8), top);
 
 	int mid = bottom.y - top.y;
@@ -38,6 +38,9 @@ void visuals::players::esp_draw() {
 				alpha = 0;
 			if (alpha > 255)
 				alpha = 255;
+
+			// note: broken; only draws 2 static arrows on the top and bottom of ur screen lmao
+			//visuals::misc::fovarrows(player);
 
 			RECT box = get_bbox(player);
 			bool is_visible = csgo::local_player->can_see_player_pos(player, player->get_hitbox_position(hitboxes::hitbox_pelvis));
@@ -127,19 +130,29 @@ void visuals::entities::grenades_draw() {
 void visuals::entities::c4_draw() {
 	vec2_t t_size = render::get_text_size(render::fonts::tahoma, "x69External");
 
-	float time = 45.f;
-
-	float c4_time;
-
-	if (interfaces::engine->is_in_game())
-		c4_time = time - (csgo::local_player->get_tick_base() * interfaces::globals->interval_per_tick);
-
-	if (!interfaces::engine->is_in_game() || !interfaces::engine->is_connected())
+	if (!interfaces::engine->is_in_game() || !interfaces::engine->is_connected()) {
 		render::text(5, t_size.x, render::fonts::tahoma, "not connected/in game", false, color(255, 150, 150));
-	else if (!csgo::bomb_planted && !csgo::bomb_exploded && !csgo::bomb_defused && interfaces::engine->is_in_game())
+		return; // we don't need the rest of this function if we aren't in game.
+	}
+
+	// make sure the rest of the function won't run before our local entity has spawned.
+	if (!csgo::local_player || !csgo::eventmanagerinitalized)
+		return;
+
+	entity_t* c4;
+	c4 = (entity_t*)interfaces::entity_list->get_client_entity(interfaces::engine->get_player_for_user_id(csgo::event->get_int("entindex")));
+
+	if (!csgo::bomb_planted && !csgo::bomb_exploded && !csgo::bomb_defused && interfaces::engine->is_in_game())
 		render::text(5, t_size.x, render::fonts::tahoma, "bomb yet to be planted", false, color(255, 0, 0));
-	else if (csgo::bomb_planted)
-		render::text(5, t_size.x, render::fonts::tahoma, "time: " + std::to_string(c4_time), false, color(255, 0, 0));
+
+	else if (c4->client_class()->class_id = class_ids::CPlantedC4) {
+		float time = 45.f; // possibly change this to m_flC4Blow
+		float c4_time = c4->time_until_bomb_explosion() - (csgo::local_player->get_tick_base() * interfaces::globals->interval_per_tick);
+
+		// we might not need this check considering i'm checking for the plantedc4 classid lmao
+		if (csgo::bomb_planted)
+			render::text(5, t_size.x, render::fonts::tahoma, "time: " + std::to_string(c4_time), false, color(255, 0, 0));
+	}
 	else if (csgo::bomb_exploded)
 		render::text(5, t_size.x, render::fonts::tahoma, "boom", false, color(255, 94, 0));
 	else if (csgo::bomb_defused)
@@ -211,9 +224,15 @@ void visuals::misc::modulateworld() {
 	const auto reset = [&]() {
 		for (uint16_t h{ interfaces::material_system->first_material() }; h != interfaces::material_system->invalid_material_handle(); h = interfaces::material_system->next_material(h)) {
 			i_material* mat = interfaces::material_system->get_material(h);
-			if (!mat) return;
+			if (!mat) {
+				console::log("MATERIAL == NULLPTR; RETURNING RESET");
+				return;
+			}
 
-			if (mat->is_error_material()) return;
+			if (mat->is_error_material()) {
+				console::log("MATERIAL == ERROR; RETURNING RESET");
+				return;
+			}
 
 			std::string name = mat->get_name();
 			auto tex_name = mat->get_texture_group_name();
@@ -221,6 +240,8 @@ void visuals::misc::modulateworld() {
 			if (strstr(tex_name, "World") || strstr(tex_name, "SkyBox") || strstr(tex_name, "StaticProp")) {
 				mat->color_modulate(1.f, 1.f, 1.f);
 				mat->alpha_modulate(1.f);
+
+				console::log("modulation reset; returning");
 			}
 		}
 	};
@@ -228,9 +249,15 @@ void visuals::misc::modulateworld() {
 	const auto set = [&]() {
 		for (uint16_t h{ interfaces::material_system->first_material() }; h != interfaces::material_system->invalid_material_handle(); h = interfaces::material_system->next_material(h)) {
 			i_material* mat = interfaces::material_system->get_material(h);
-			if (!mat) return;
+			if (!mat) {
+				console::log("MATERIAL == NULLPTR; CONTINUING");
+				return;
+			}
 
-			if (mat->is_error_material()) return;
+			if (mat->is_error_material()) {
+				console::log("MATERIAL == ERROR; CONTINUING");
+				return;
+			}
 
 			std::string name = mat->get_name();
 			auto tex_name = mat->get_texture_group_name();
@@ -243,6 +270,8 @@ void visuals::misc::modulateworld() {
 
 			if (variables::darkmode && strstr(tex_name, "SkyBox"))
 				mat->color_modulate(228.f / 255.f, 35.f / 255.f, 157.f / 255.f);
+
+			console::log("modulation set; returning");
 		}
 	};
 
@@ -267,5 +296,106 @@ void visuals::misc::modulateworld() {
 		was_ingame = interfaces::engine->is_in_game();
 
 		done = false;
+	}
+}
+
+void visuals::misc::fovarrows(player_t* player) {
+	vec3_t view_origin, target_pos, delta;
+	vec2_t screen_pos, offscreen_pos;
+	float  leeway_x, leeway_y, radius, offscreen_rotation;
+	bool   is_on_screen;
+	vertex_t verts[3], verts_outline[3];
+	int w, h;
+
+	// get our screen size before continuing.
+	interfaces::engine->get_screen_size(w, h);
+
+	// todo - dex; move this?
+	static auto get_offscreen_data = [w, h](const vec3_t& delta, float radius, vec2_t& out_offscreen_pos, float& out_rotation) {
+		vec3_t view_angles(csgo::local_player->view_offset());
+		vec3_t fwd, right, up(0.f, 0.f, 1.f);
+		float  front, side, yaw_rad, sa, ca;
+
+		// get viewport angles forward directional vector.
+		math::angle_vectors(view_angles, &fwd);
+
+		// convert viewangles forward directional vector to a unit vector.
+		fwd.z = 0.f;
+		fwd.normalize();
+
+		// calculate front / side positions.
+		right = up.cross(fwd);
+		front = delta.dot(fwd);
+		side = delta.dot(right);
+
+		// setup offscreen position.
+		out_offscreen_pos.x = radius * -side;
+		out_offscreen_pos.y = radius * -front;
+
+		// get the rotation ( yaw, 0 - 360 ).
+		out_rotation = RAD2DEG(std::atan2(out_offscreen_pos.x, out_offscreen_pos.y) + math::pi);
+
+		// get needed sine / cosine values.
+		yaw_rad = DEG2RAD(-out_rotation);
+		sa = std::sin(yaw_rad);
+		ca = std::cos(yaw_rad);
+
+		// rotate offscreen position around.
+		out_offscreen_pos.x = (int)((w / 2.f) + (radius * sa));
+		out_offscreen_pos.y = (int)((h / 2.f) - (radius * ca));
+	};
+
+	if (!variables::esp)
+		return;
+
+	// get the player's center screen position.
+	target_pos = player->world_space_center();
+	is_on_screen = math::world_to_screen(target_pos, screen_pos);
+
+	// give some extra room for screen position to be off screen.
+	leeway_x = w / 18.f;
+	leeway_y = h / 18.f;
+
+	// origin is not on the screen at all, get offscreen position data and start rendering.
+	if (!is_on_screen
+		|| screen_pos.x < -leeway_x
+		|| screen_pos.x >(w + leeway_x)
+		|| screen_pos.y < -leeway_y
+		|| screen_pos.y >(h + leeway_y)) {
+
+		// get viewport origin.
+		view_origin = csgo::local_player->origin(); //interfaces::view_render->m_view.m_origin;
+
+		// get direction to target.
+		delta = (target_pos - view_origin).normalized();
+
+		// note - dex; this is the 'YRES' macro from the source sdk.
+		radius = 200.f * (h / 480.f);
+
+		// get the data we need for rendering.
+		get_offscreen_data(delta, radius, offscreen_pos, offscreen_rotation);
+
+		// bring rotation back into range... before rotating verts, sine and cosine needs this value inverted.
+		// note - dex; reference: 
+		// https://github.com/VSES/SourceEngine2007/blob/43a5c90a5ada1e69ca044595383be67f40b33c61/src_main/game/client/tf/tf_hud_damageindicator.cpp#L182
+		offscreen_rotation = -offscreen_rotation;
+
+		// setup vertices for the triangle.
+		verts[0] = { offscreen_pos.x, offscreen_pos.y };        // 0,  0
+		verts[1] = { offscreen_pos.x - 12.f, offscreen_pos.y + 24.f }; // -1, 1
+		verts[2] = { offscreen_pos.x + 12.f, offscreen_pos.y + 24.f }; // 1,  1
+
+		// setup verts for the triangle's outline.
+		verts_outline[0] = { verts[0].position.x - 1.f, verts[0].position.y - 1.f };
+		verts_outline[1] = { verts[1].position.x - 1.f, verts[1].position.y + 1.f };
+		verts_outline[2] = { verts[2].position.x + 1.f, verts[2].position.y + 1.f };
+
+		// rotate all vertices to point towards our target.
+		verts[0] = math::rotate_vertex(offscreen_pos, verts[0], offscreen_rotation);
+		verts[1] = math::rotate_vertex(offscreen_pos, verts[1], offscreen_rotation);
+		verts[2] = math::rotate_vertex(offscreen_pos, verts[2], offscreen_rotation);
+
+		interfaces::surface->set_drawing_color(225, 25, 225, 175);
+		interfaces::surface->draw_textured_polygon(3, verts);
 	}
 }

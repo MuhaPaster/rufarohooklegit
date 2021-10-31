@@ -34,50 +34,41 @@ void misc::nade_prediction() {
 	nadeVar->set_value(true);
 }
 
-bool misc::rcs( ) {
-    if (!csgo::local_player || !csgo::local_player->is_alive() || !csgo::local_player->active_weapon())
-        return false;
-        
-    auto clientclass = csgo::local_player->client_class();
-    if (!clientclass)
-        return false;
+void misc::movement::blockbot(c_usercmd* cmd) {
+	if (!GetAsyncKeyState(VK_XBUTTON2)) return;
 
-    auto classids = clientclass->class_id;
-    if (classids == class_ids::CWeaponTaser || classids == class_ids::CKnife || classids == class_ids::CKnifeGG)
-        return false;
+	float m_best_distance = 250.0f;
+	int m_index = -1;
 
-    vec3_t angle;
-    vec3_t m_ViewAngle;
-    vec3_t OldAngle;
-    int ShotsFired = 0;
-    while (true) {
-        if (GetAsyncKeyState(0x01)) {
-            ShotsFired = csgo::local_player->shots_fired();
-            if (ShotsFired > 1) {
-                m_ViewAngle = csgo::local_player->eye_angles();
+	for (auto i = 1; i < interfaces::globals->max_clients; i++) {
+		auto entity = (player_t*)interfaces::entity_list->get_client_entity(i);
+		if (!entity || entity->dormant() || !entity->is_alive() || entity == csgo::local_player) continue;
 
-                vec3_t m_PunchAngle = csgo::local_player->punch_angle();
+		float m_distance = csgo::local_player->abs_origin().distance_to(entity->abs_origin());
+		if (m_distance < m_best_distance) {
+			m_best_distance = m_distance;
+			m_index = i;
+		}
+	}
 
-                m_ViewAngle.x = m_ViewAngle.x + OldAngle.x;
-                m_ViewAngle.y = m_ViewAngle.y + OldAngle.y;
-                // Add the old "viewpunch" so we get the "center" of the screen again
+	auto entity = (player_t*)interfaces::entity_list->get_client_entity(m_index);
+	if (!entity) return;
 
-                angle.x = m_ViewAngle.x - m_PunchAngle.x * 2;
-                angle.y = m_ViewAngle.y - m_PunchAngle.y * 2;
-                // remove the new "viewpunch" from the viewangles
-                csgo::local_player->set_angles(angle);
+	float m_speed = 450.0f;
 
-                OldAngle.x = m_PunchAngle.x * 2;
-                OldAngle.y = m_PunchAngle.y * 2;
-            }
-            else {
-                OldAngle.x = 0;
-                OldAngle.y = 0;
-            }
-        }
-        else {
-            OldAngle.x = 0;
-            OldAngle.y = 0;
-        }
-    }
+	vec3_t local_angles;
+	interfaces::engine->get_view_angles(local_angles);
+
+	vec3_t m_forward = entity->abs_origin() - csgo::local_player->abs_origin();
+	if (entity->get_hitbox_position(6).z < csgo::local_player->abs_origin().z && csgo::local_player->abs_origin().distance_to(entity->abs_origin()) < 100.0f) {
+		cmd->forwardmove = ((sin(DEG2RAD(local_angles.y)) * m_forward.y) + (cos(DEG2RAD(local_angles.y)) * m_forward.x)) * m_speed;
+		cmd->sidemove = ((cos(DEG2RAD(local_angles.y)) * -m_forward.y) + (sin(DEG2RAD(local_angles.y)) * m_forward.x)) * m_speed;
+	}
+	else {
+		auto yaw_delta = (atan2(m_forward.y, m_forward.x) * 180.0f / M_PI) - local_angles.y;
+		if (yaw_delta > 180) { yaw_delta -= 360; }
+		else if (yaw_delta < -180) { yaw_delta += 360; }
+		if (yaw_delta > 0.25) { cmd->sidemove = -m_speed; }
+		else if (yaw_delta < -0.25) { cmd->sidemove = m_speed; }
+	}
 }

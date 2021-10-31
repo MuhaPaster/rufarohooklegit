@@ -1,7 +1,6 @@
 #include "../features.hpp"
 
-vec3_t CalculateRelativeAngle(const vec3_t& source, const vec3_t& destination, vec3_t view_angles) noexcept
-{
+vec3_t CalculateRelativeAngle(const vec3_t& source, const vec3_t& destination, vec3_t view_angles) noexcept {
 	vec3_t angles = math::calc_angle(source, destination);
 
 	return (angles - view_angles).normalized();
@@ -10,8 +9,7 @@ vec3_t CalculateRelativeAngle(const vec3_t& source, const vec3_t& destination, v
 auto pressed = false;
 auto last_pressed = false;
 
-constexpr bool isArmored(int hitGroup, bool helmet) noexcept
-{
+constexpr bool isArmored(int hitGroup, bool helmet) noexcept {
     switch (hitGroup) {
     case hitgroup_head:
         return helmet;
@@ -24,8 +22,7 @@ constexpr bool isArmored(int hitGroup, bool helmet) noexcept
     }
 }
 
-constexpr float getDamageMultiplier(int hitGroup) noexcept
-{
+constexpr float getDamageMultiplier(int hitGroup) noexcept {
     switch (hitGroup) {
     case hitgroup_head:
         return 4.0f;
@@ -44,8 +41,7 @@ struct ModuleInfo {
     std::size_t size;
 };
 
-[[nodiscard]] static auto generateBadCharTable(std::string_view pattern) noexcept
-{
+[[nodiscard]] static auto generateBadCharTable(std::string_view pattern) noexcept {
     assert(!pattern.empty());
 
     std::array<std::size_t, (std::numeric_limits<std::uint8_t>::max)() + 1> table;
@@ -63,8 +59,7 @@ struct ModuleInfo {
     return table;
 }
 
-static ModuleInfo getModuleInformation(const char* name) noexcept
-{
+static ModuleInfo getModuleInformation(const char* name) noexcept {
     if (HMODULE handle = GetModuleHandleA(name)) {
         if (MODULEINFO moduleInfo; GetModuleInformation(GetCurrentProcess(), handle, &moduleInfo, sizeof(moduleInfo)))
             return ModuleInfo{ moduleInfo.lpBaseOfDll, moduleInfo.SizeOfImage };
@@ -73,8 +68,7 @@ static ModuleInfo getModuleInformation(const char* name) noexcept
 }
 
 template <bool ReportNotFound = true>
-static std::uintptr_t findAPattern(ModuleInfo moduleInfo, std::string_view pattern) noexcept
-{
+static std::uintptr_t findAPattern(ModuleInfo moduleInfo, std::string_view pattern) noexcept {
     static auto id = 0;
     ++id;
 
@@ -106,13 +100,11 @@ static std::uintptr_t findAPattern(ModuleInfo moduleInfo, std::string_view patte
 }
 
 template <bool ReportNotFound = true>
-std::uintptr_t findPattern(const char* moduleName, std::string_view pattern)
-{
+std::uintptr_t findPattern(const char* moduleName, std::string_view pattern) {
     return findAPattern<ReportNotFound>(getModuleInformation(moduleName), pattern);
 }
 
-static bool traceToExit(const trace_t& enterTrace, const vec3_t& start, const vec3_t& direction, vec3_t& end, trace_t& exitTrace)
-{
+static bool traceToExit(const trace_t& enterTrace, const vec3_t& start, const vec3_t& direction, vec3_t& end, trace_t& exitTrace) {
     bool result = false;
     const auto traceToExitFn = findPattern("client", "\x55\x8B\xEC\x83\xEC\x4C\xF3\x0F\x10\x75");
     __asm {
@@ -137,8 +129,7 @@ static bool traceToExit(const trace_t& enterTrace, const vec3_t& start, const ve
     return result;
 }
 
-static float handleBulletPenetration(surfacedata_t* enterSurfaceData, const trace_t& enterTrace, const vec3_t& direction, vec3_t& result, float penetration, float damage) noexcept
-{
+static float handleBulletPenetration(surfacedata_t* enterSurfaceData, const trace_t& enterTrace, const vec3_t& direction, vec3_t& result, float penetration, float damage) noexcept {
     vec3_t end;
     trace_t exitTrace;
 
@@ -171,8 +162,7 @@ static float handleBulletPenetration(surfacedata_t* enterSurfaceData, const trac
     return damage;
 }
 
-static bool canScan(entity_t* entity, const vec3_t& destination, const weapon_info_t* weaponData, int minDamage, bool allowFriendlyFire) noexcept
-{
+static bool canScan(entity_t* entity, const vec3_t& destination, const weapon_info_t* weaponData, int minDamage, bool allowFriendlyFire) noexcept {
 	if (!csgo::local_player)
 		return false;
 
@@ -246,21 +236,18 @@ void aimbot::run(c_usercmd* cmd) {
 	if (!interfaces::engine->is_connected() || !interfaces::engine->is_in_game() || !csgo::local_player || csgo::local_player->next_attack() > interfaces::globals->cur_time || csgo::local_player->is_defusing()) return;
 
     // nigger bool
-    interfaces::console->get_convar("cl_ragdoll_gravity")->set_value(100);
+    interfaces::console->get_convar("cl_ragdoll_gravity")->set_value(300);
 
 	auto active_weapon = csgo::local_player->active_weapon();
 	if (!active_weapon || !active_weapon->clip1_count())
 		return;
-
-	//if (csgo::local_player->shots_fired() > 0)
-	//	return;
 
 	if (!GetAsyncKeyState(VK_LBUTTON) || !variables::aimbot)
 		return;
 	
     auto usedfov = variables::fov * 2;
 
-	auto rcs = csgo::local_player->aim_punch_angle() * 3.f;
+	auto rcs = csgo::local_player->aim_punch_angle() * 2.25f; // note: anything more is wayy to fucking much
 
 	if ((cmd->buttons & in_attack)) {
 		auto best_fov = usedfov;

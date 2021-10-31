@@ -5,6 +5,8 @@
 void c_custom_game_event_listener::fire_game_event(i_game_event* m_event) {
 	if (!csgo::local_player) return;
 
+	csgo::eventmanagerinitalized = false;
+
 	// pasted these lambda functions lmao
 	auto GetHitboxByHitgroup = [](int32_t iHitgroup) -> int {
 		switch (iHitgroup) {
@@ -57,6 +59,8 @@ void c_custom_game_event_listener::fire_game_event(i_game_event* m_event) {
 			return "left foot";
 		}
 	};
+
+	csgo::event = m_event;
 
 	if (strstr(m_event->get_name(), "round_start")) {
 		csgo::bomb_planted = false;
@@ -219,4 +223,6 @@ void c_custom_game_event_listener::fire_game_event(i_game_event* m_event) {
 	else if (strstr(m_event->get_name(), "client_disconnect")) {
 		backtrack.init();
 	}
+
+	csgo::eventmanagerinitalized = true;
 }

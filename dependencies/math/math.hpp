@@ -1,6 +1,26 @@
 #pragma once
 
 namespace math {
+	constexpr float pi = 3.1415926535897932384f; // pi
+	constexpr float pi_2 = pi * 2.f;               // pi * 2
+	static const float invtwopi = 0.1591549f;
+	static const float twopi = 6.283185f;
+	static const float threehalfpi = 4.7123889f;
+	static const float halfpi = 1.570796f;
+	static constexpr long double M_PIRAD = 0.01745329251f;
+	static constexpr long double M_RADPI = 57.295779513082f;
+
+	static vertex_t rotate_vertex(const vec2_t& p, const vertex_t& v, float angle) {
+		// convert theta angle to sine and cosine representations.
+		float c = std::cos(DEG2RAD(angle));
+		float s = std::sin(DEG2RAD(angle));
+
+		return {
+			p.x + (v.position.x - p.x) * c - (v.position.y - p.y) * s,
+			p.y + (v.position.x - p.x) * s + (v.position.y - p.y) * c
+		};
+	}
+
 	void correct_movement(vec3_t old_angles, c_usercmd* cmd, float old_forwardmove, float old_sidemove);
 	vec3_t calculate_angle(vec3_t& a, vec3_t& b);
 	void sin_cos(float r, float* s, float* c);

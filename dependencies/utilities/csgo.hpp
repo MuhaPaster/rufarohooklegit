@@ -42,6 +42,9 @@ namespace csgo {
 	extern player_t* local_player;
 	extern vec3_t angles;
 
+	extern i_game_event* event;
+	extern bool eventmanagerinitalized;
+
 	// bomb esp bullshit
 	extern bool   bomb_planted;
 	extern bool   bomb_exploded;

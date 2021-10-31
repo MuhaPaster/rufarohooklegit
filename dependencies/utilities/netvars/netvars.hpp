@@ -71,3 +71,6 @@ namespace netvar_manager {
 #define OFFSET( type, var, offset ) type& var() { \
     return *( type* )( uintptr_t( this ) + offset ); \
 }
+
+#define MEMBER_FUNC_ARGS(...) ( this, __VA_ARGS__ ); }
+#define VFUNC( index, func, sig ) auto func { return utilities::call_virtual< sig >( this, index ) MEMBER_FUNC_ARGS

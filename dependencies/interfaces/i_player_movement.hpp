@@ -85,11 +85,46 @@ public:
 	virtual ~player_game_movement(void) { }
 };
 
+#define CONCAT_IMPL( x, y ) x##y
+#define MACRO_CONCAT( x, y ) CONCAT_IMPL( x, y )
+#define PAD( size ) uint8_t MACRO_CONCAT( _pad, __COUNTER__ )[ size ];
 class player_prediction {
 public:
+	PAD(0x4);
+	int32_t m_last_ground;			// 0x0004
+	bool    m_in_prediction;		// 0x0008
+	bool    m_first_time_predicted;	// 0x0009
+	bool    m_engine_paused;		// 0x000A
+	bool    m_old_cl_predict_value; // 0x000B
+	int32_t m_previous_startframe;  // 0x000C
+	int32_t m_commands_predicted;	// 0x0010
+	PAD(0x38);						// 0x0014
+	float   m_backup_realtime;		// 0x004C
+	PAD(0xC);						// 0x0050
+	float   m_backup_curtime;		// 0x005C
+	PAD(0xC);						// 0x0060
+	float   m_backup_interval;		// 0x006C
+
+	// time to hit mega premium$$$$$$$
+
+	void update(int startframe, bool validframe, int incoming_acknowledged, int outgoing_command) {
+		typedef void(__thiscall* o_update)(void*, int, bool, int, int);
+		return utilities::call_virtual<o_update>(this, 3)(this, startframe, validframe, incoming_acknowledged, outgoing_command);
+	}
+
+	void set_local_view_angles(const vec3_t& ang) {
+		typedef void(__thiscall* o_set_view_angles)(decltype(this), const vec3_t&);
+		return utilities::call_virtual< o_set_view_angles >(this, 13)(this, ang);
+	}
+
 	bool in_prediction() {
 		typedef bool( __thiscall *o_in_prediction )( void * );
 		return utilities::call_virtual<o_in_prediction>( this, 14 )( this );
+	}
+
+	void check_moving_ground(player_t* player, double frametime) {
+		typedef void(__thiscall* o_moving_ground)(void*, player_t*, double);
+		return utilities::call_virtual<o_moving_ground>(this, 18)(this, player, frametime);
 	}
 
 	void run_command( player_t *player, c_usercmd *cmd, player_move_helper *helper ) {

@@ -155,6 +155,9 @@ public:
 	float length_sqr();
 	float length_2d_sqr(void) const;
 	float dot(const vec3_t other);
+	__forceinline float dot(const vec3_t& v) const {
+		return (x * v.x + y * v.y + z * v.z);
+	}
 	float dot(const float* other);
 };
 

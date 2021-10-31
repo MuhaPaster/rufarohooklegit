@@ -4,6 +4,9 @@ namespace csgo {
 	player_t* local_player = nullptr;
 	vec3_t angles;
 
+	i_game_event* event;
+	bool eventmanagerinitalized;
+
 	// for the bomb esp
 	bool   bomb_planted;
 	bool   bomb_exploded;

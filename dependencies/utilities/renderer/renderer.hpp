@@ -18,7 +18,6 @@ enum font_flags {
 };
 
 namespace render {
-
 	void initialize();
 
 	void draw_line(std::int32_t from_x, std::int32_t from_y, std::int32_t to_x, std::int32_t to_y, color color);
@@ -26,6 +25,7 @@ namespace render {
 	void text(std::int32_t x, std::int32_t y, unsigned long font, std::string text, bool centered, color color);
 	void draw_rect(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height, color color);
 	void draw_filled_rect(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height, color color);
+	void draw_arc(int x, int y, int radius, int start_angle, int percent, int thickness, color color);
 	void draw_outline(std::int32_t x, std::int32_t y, std::int32_t width, std::int32_t height, color color);
 	void draw_textured_polygon(std::int32_t vertices_count, vertex_t* vertices, color color);
 	void draw_circle(std::int32_t x, std::int32_t y, std::int32_t radius, std::int32_t segments, color color);
