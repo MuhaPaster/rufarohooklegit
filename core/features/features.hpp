@@ -13,6 +13,7 @@ namespace visuals {
 	}
 	namespace entities {
 		void grenades_draw();
+		void c4_draw();
 	}
 	namespace misc {
 		void recoil_crosshair_draw();

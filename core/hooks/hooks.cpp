@@ -156,7 +156,7 @@ void __stdcall hooks::paint_traverse::hook(unsigned int panel, bool force_repain
 
 		visuals::misc::modulateworld();
 
-		//visuals::misc::bombesp();
+		visuals::entities::c4_draw();
 
 		events::print();
 

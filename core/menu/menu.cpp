@@ -69,7 +69,7 @@ void menu::draw() {
 
 	y += 10;
 
-	render::text(5, y, render::fonts::tahoma, "x69 External", false, color(255, 150, 150));
+	render::text(5, y, render::fonts::tahoma, "x69External", false, color(255, 150, 150));
 
 	bool nigger_bool = GetAsyncKeyState(VK_XBUTTON1);
 

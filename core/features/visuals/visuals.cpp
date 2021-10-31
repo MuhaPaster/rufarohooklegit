@@ -124,6 +124,28 @@ void visuals::entities::grenades_draw() {
 	}
 }
 
+void visuals::entities::c4_draw() {
+	vec2_t t_size = render::get_text_size(render::fonts::tahoma, "x69External");
+
+	float time = 45.f;
+
+	float c4_time;
+
+	if (interfaces::engine->is_in_game())
+		c4_time = time - (csgo::local_player->get_tick_base() * interfaces::globals->interval_per_tick);
+
+	if (!interfaces::engine->is_in_game() || !interfaces::engine->is_connected())
+		render::text(5, t_size.x, render::fonts::tahoma, "not connected/in game", false, color(255, 150, 150));
+	else if (!csgo::bomb_planted && !csgo::bomb_exploded && !csgo::bomb_defused && interfaces::engine->is_in_game())
+		render::text(5, t_size.x, render::fonts::tahoma, "bomb yet to be planted", false, color(255, 0, 0));
+	else if (csgo::bomb_planted)
+		render::text(5, t_size.x, render::fonts::tahoma, "time: " + std::to_string(c4_time), false, color(255, 0, 0));
+	else if (csgo::bomb_exploded)
+		render::text(5, t_size.x, render::fonts::tahoma, "boom", false, color(255, 94, 0));
+	else if (csgo::bomb_defused)
+		render::text(5, t_size.x, render::fonts::tahoma, "defused", false, color(0, 98, 255));
+}
+
 void visuals::misc::recoil_crosshair_draw() {
 	if (!csgo::local_player || !csgo::local_player->is_alive())
 		return;
