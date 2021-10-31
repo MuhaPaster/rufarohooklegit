@@ -172,26 +172,27 @@ void __stdcall hooks::paint_traverse::hook(unsigned int panel, bool force_repain
 }
 
 void __fastcall hooks::draw_model_execute::hook(void* _this, int edx, i_mat_render_context* ctx, const draw_model_state_t& state, const model_render_info_t& info, matrix_t* matrix) {
-	if (interfaces::engine->is_in_game() && interfaces::engine->is_connected() && csgo::local_player) {
-		const auto mdl = info.model;
-		if (!mdl)
-			return;
+	if (!interfaces::engine->is_in_game() && !csgo::local_player)
+		return;
 
-		bool is_player = strstr(mdl->name, "models/player") != nullptr;
+	const auto mdl = info.model;
+	if (!mdl)
+		return;
 
-		if (!interfaces::studio_render->is_forced() && is_player) {
-			visuals::players::chams_run(ctx, state, info, matrix);
-			draw_model_execute_original(_this, edx, ctx, state, info, matrix);
-			interfaces::model_render->override_material(nullptr);
-		}
-		else if (!interfaces::model_render->is_forced() && !is_player) {
-			visuals::players::chams_run(ctx, state, info, matrix);
-			draw_model_execute_original(_this, edx, ctx, state, info, matrix);
-			interfaces::model_render->override_material(nullptr);
-		}
-		else {
-			draw_model_execute_original(_this, edx, ctx, state, info, matrix);
-		}
+	bool is_player = strstr(mdl->name, "models/player") != nullptr;
+
+	if (!interfaces::studio_render->is_forced() && is_player) {
+		visuals::players::chams_run(ctx, state, info, matrix);
+		draw_model_execute_original(_this, edx, ctx, state, info, matrix);
+		interfaces::model_render->override_material(nullptr);
+	}
+	else if (!interfaces::model_render->is_forced() && !is_player) {
+		visuals::players::chams_run(ctx, state, info, matrix);
+		draw_model_execute_original(_this, edx, ctx, state, info, matrix);
+		interfaces::model_render->override_material(nullptr);
+	}
+	else {
+		draw_model_execute_original(_this, edx, ctx, state, info, matrix);
 	}
 }
 

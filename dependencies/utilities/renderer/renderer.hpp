@@ -35,6 +35,6 @@ namespace render {
 	namespace fonts {
 		extern unsigned long tahoma;
 		extern unsigned long bigtahoma;
-		extern unsigned long weapons;
+		//extern unsigned long weapons;
 	}
 }

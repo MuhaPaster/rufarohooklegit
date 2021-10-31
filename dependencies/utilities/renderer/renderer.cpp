@@ -1,13 +1,13 @@
 #include "renderer.hpp"
 
 unsigned long render::fonts::tahoma;
-unsigned long render::fonts::weapons;
+//unsigned long render::fonts::weapons;
 unsigned long render::fonts::bigtahoma;
 
 void render::initialize() { // note: always call fontflag_custom before setting fontflags or else it wont call it correctly!
 	render::fonts::tahoma = interfaces::surface->font_create(); interfaces::surface->set_font_glyph(render::fonts::tahoma, "Tahoma", 14, 800, 0, 0, font_flags::fontflag_custom | font_flags::fontflag_outline);
 	render::fonts::bigtahoma = interfaces::surface->font_create(); interfaces::surface->set_font_glyph(render::fonts::bigtahoma, "Tahoma", 20, 800, 0, 0, font_flags::fontflag_custom | font_flags::fontflag_outline | font_flags::fontflag_antialias);
-	render::fonts::weapons = interfaces::surface->font_create(); interfaces::surface->set_font_glyph(render::fonts::weapons, "undefeated", 20, 800, 0, 0, font_flags::fontflag_custom | font_flags::fontflag_outline | font_flags::fontflag_antialias);
+	//render::fonts::weapons = interfaces::surface->font_create(); interfaces::surface->set_font_glyph(render::fonts::weapons, "undefeated", 20, 800, 0, 0, font_flags::fontflag_custom | font_flags::fontflag_outline | font_flags::fontflag_antialias);
 
 	console::log("[setup] render initialized!\n");
 }
