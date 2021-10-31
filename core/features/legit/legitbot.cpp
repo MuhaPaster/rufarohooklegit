@@ -260,7 +260,7 @@ void aimbot::run(c_usercmd* cmd) {
 	
     auto usedfov = variables::fov * 2;
 
-	auto rcs = csgo::local_player->aim_punch_angle() * 2.f;
+	auto rcs = csgo::local_player->aim_punch_angle() * 3.f;
 
 	if ((cmd->buttons & in_attack)) {
 		auto best_fov = usedfov;
