@@ -99,9 +99,11 @@ void visuals::entities::grenades_draw() {
 						std::string name = hdr->name_char_array;
 						if (name.find("incendiarygrenade") != std::string::npos || name.find("fraggrenade") != std::string::npos) {
 							//render::draw_circle(w2s.x, w2s.y, 17, -98, color(25, 25, 25));
-							//if (dist < 5) render::text(w2s.x, w2s.y, render::fonts::tahoma, "!", true, color(255, 0, 0));
-							//else render::text(w2s.x, w2s.y, render::fonts::weapons, "j", true, color(255, 0, 0));
-							render::text(w2s.x, w2s.y - 10, render::fonts::tahoma, "frag", true, color(255, 0, 0));
+							if (dist < 7) 
+								render::text(w2s.x, w2s.y, render::fonts::tahoma, "!", true, color(255, 0, 0));
+							else 
+								render::text(w2s.x, w2s.y, render::fonts::tahoma, "frag", true, color(255, 0, 0));
+							//render::text(w2s.x, w2s.y - 10, render::fonts::tahoma, "frag", true, color(255, 0, 0));
 							break;
 						}
 
