@@ -82,7 +82,7 @@ void menu::draw() {
 	option_bool(x, &y, "BT Chams:", &variables::backtrack_chams, VK_NUMPAD6);
 	option_bool(x, &y, "Triggerbot:", &nigger_bool, NULL);
 	option_int(x, &y, "Aimbot:", &variables::aimbot, std::vector<std::string>{ "OFF", "Normal", "Silent", "SEMIRAGE" }, VK_NUMPAD1);
-	option_int(x, &y, "FOV:", &variables::aimbot, std::vector<std::string>{ "0", "1", "2", "3", "4", "5", "6" }, VK_NUMPAD2, true);
+	option_int(x, &y, "FOV:", &variables::fov, std::vector<std::string>{ "0", "1", "2", "3", "4", "5", "6" }, VK_NUMPAD2, true);
 	option_bool(x, &y, "Target Team:", &variables::dangerzone, VK_NUMPAD3);
 	option_int(x, &y, "Crosshair:", &variables::crosshair, std::vector<std::string>{ "OFF", "Static", "Recoil" }, VK_NUMPAD0);
 }
