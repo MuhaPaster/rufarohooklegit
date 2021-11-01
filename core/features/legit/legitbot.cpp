@@ -210,6 +210,19 @@ static bool canScan(entity_t* entity, const vec3_t& destination, const weapon_in
 	return false;
 }
 
+float aimbot::return_hitchance(player_t* local) {
+	weapon_t* wep = (weapon_t*)interfaces::entity_list->get_client_entity_handle(local->active_weapon_handle());
+	client_class* cclass = (client_class*)wep->client_class();
+	if (!local) return 0;
+	if (!wep) return 0;
+	float inaccuracy = wep->inaccuracy();
+
+	if (inaccuracy == 0) inaccuracy = 0.0000001;
+		inaccuracy = 1 / inaccuracy;
+
+	return inaccuracy;
+}
+
 void aimbot::run(c_usercmd* cmd) {
 	const auto is_visible = [&](player_t* m_player, vec3_t start, vec3_t end) -> bool {
 		if (!m_player) return false;
@@ -267,11 +280,11 @@ void aimbot::run(c_usercmd* cmd) {
 				|| entity == csgo::local_player
 				|| entity->dormant()
 				|| !entity->is_alive()
-				|| (entity->team() == csgo::local_player->team() && !variables::dangerzone)
+				|| !variables::dangerzone && (entity->team() == csgo::local_player->team())
 				|| entity->has_gun_game_immunity())
 				continue;
 
-			if (variables::aimbot == 3) {
+			if (variables::aimbot == 3 || variables::aimbot == 4) {
 				auto bone_position = entity->get_bone_position(8);
 				const auto angle = CalculateRelativeAngle(local_player_eye_position, bone_position, cmd->viewangles + rcs);
 
@@ -286,8 +299,7 @@ void aimbot::run(c_usercmd* cmd) {
 				}
 			}
 			else {
-				for (auto bone : { 8, 4, 3, 7, 6, 5 })
-				{
+				for (auto bone : { 8, 4, 3, 7, 6, 5 }) {
 					auto bone_position = entity->get_bone_position(bone);
 					const auto angle = CalculateRelativeAngle(local_player_eye_position, bone_position, cmd->viewangles + rcs);
 
@@ -322,8 +334,8 @@ void aimbot::run(c_usercmd* cmd) {
 			if (last_command < cmd->command_number && !last_angles.IsZero() && can_use_silent)
 				cmd->viewangles = math::calc_angle(local_player_eye_position, best_target);
 
-            if (variables::aimbot == 2)
-			    angle /= 5;
+            if (variables::aimbot == 1)
+			    angle /= 6.25;
 
 			cmd->viewangles.y += angle.y;
 			cmd->viewangles.x += angle.x;
@@ -338,6 +350,16 @@ void aimbot::run(c_usercmd* cmd) {
 				last_angles = cmd->viewangles;
 			else
 				last_angles = vec3_t();
+
+			if (variables::aimbot == 4 && !(cmd->buttons & in_attack)) {
+				if (65 * 1.5 < return_hitchance(csgo::local_player) && angle != vec3_t(0, 0, 0) && best_fov / 10 <= usedfov) {
+					csgo::local_player->set_angles(angle);
+					cmd->viewangles = angle;
+					math::normalize_view(cmd->viewangles);
+					cmd->buttons |= in_attack;
+					csgo::local_player->set_angles(cmd->viewangles);
+				}
+			}
 
 			static auto max_time = .0f;
 			static auto can_reset_auto_delay_time = true;
