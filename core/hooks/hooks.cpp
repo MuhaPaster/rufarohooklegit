@@ -1,8 +1,5 @@
 #include "../../dependencies/utilities/csgo.hpp"
 #include "../features/features.hpp"
-#include "../features/misc/engine_prediction.hpp"
-
-#include "../menu/menu.hpp"
 
 hooks::create_move::fn create_move_original = nullptr;
 hooks::paint_traverse::fn paint_traverse_original = nullptr;
@@ -111,10 +108,45 @@ bool __stdcall hooks::create_move::hook(float input_sample_frametime, c_usercmd*
 
 	misc::movement::bunny_hop(cmd);
 
-	if (variables::reveal_competitive_ranks && cmd->buttons & in_score) interfaces::client->dispatch_user_message(50, 0, 0);
+	bool dispatchusermessages = false;
+	bool wasdipatchingusermessages = false;
+
+	// i hope you get the logic behind this peen;
+	// basically i check if i was unlocking ranks and if i was and we turn it off or if the game ends it should nullptr;
+	// then if we still have it on and we are back in game it should recall it again after nulling it.
+	if (interfaces::engine->is_connected() && interfaces::engine->is_in_game() && (variables::reveal_competitive_ranks && cmd->buttons & in_score)) {
+		interfaces::client->dispatch_user_message(50, 0, 0);
+		dispatchusermessages = true;
+		wasdipatchingusermessages = true;
+
+		console::log("unlocking ranks; first time calling it");
+	}
+	else if (!variables::reveal_competitive_ranks && dispatchusermessages) {
+		interfaces::client->dispatch_user_message(0, 0, 0);
+		dispatchusermessages = false;
+		wasdipatchingusermessages = false;
+
+		console::log("nulling dsum because we turned it off");
+	}
+	else if (variables::reveal_competitive_ranks && dispatchusermessages && !(interfaces::engine->is_connected() && interfaces::engine->is_in_game())) {
+		// this might crash as i call it when we are in the menu; who knows
+		interfaces::client->dispatch_user_message(0, 0, 0);
+		dispatchusermessages = true;
+		wasdipatchingusermessages = true;
+
+		console::log("nulling dsum because we are no longer in game");
+	}
+	else if ((variables::reveal_competitive_ranks && cmd->buttons & in_score) && wasdipatchingusermessages && dispatchusermessages && (interfaces::engine->is_connected() && interfaces::engine->is_in_game())) {
+		// unlock ranks again because we reconnected.
+		interfaces::client->dispatch_user_message(50, 0, 0);
+		dispatchusermessages = true;
+		wasdipatchingusermessages = true;
+
+		console::log("unlocking ranks because we are back in game");
+	}
 
 	prediction::start(cmd); {
-		//misc::rcs();
+		misc::movement::blockbot(cmd);
 		backtrack.run(cmd);
 		triggerbot::run(cmd);
 		aimbot::get().run(cmd);
@@ -216,7 +248,7 @@ void __stdcall hooks::frame_stage_notify::hook(client_frame_stage_t frame_stage)
 		for (auto index = 0; index < sz_var_map; index++)
 			*(uintptr_t*)((*(uintptr_t*)var_map) + index * 12) = flag;
 
-		console::log("[backtracking] forcing interpolation flags\n");
+		console::log("[backtracking] disabling interpolation; this might cause aimbot errors.\n");
 	};
 	switch (frame_stage) {
 		case FRAME_UNDEFINED:
@@ -260,22 +292,26 @@ int __fastcall hooks::bsp_query::hook(void* ecx, int edx, vec3_t* mins, vec3_t* 
 	static vec3_t world_max = { 16384.0f, 16384.0f, 16384.0f };
 	static std::uintptr_t insert_into_tree = (uintptr_t)(utilities::pattern_scan("client.dll", "89 44 24 14 EB 08 C7 44 24 ? ? ? ? ? 8B 45"));
 
-	if (_ReturnAddress() != (void*)insert_into_tree)
-		return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
+	// occulusion getting updated on player movement/angle change,
+	// in RecomputeRenderableLeaves ( https://github.com/pmrowla/hl2sdk-csgo/blob/master/game/client/clientleafsystem.cpp#L674 );
+	// check for return in CClientLeafSystem::InsertIntoTree
+	if (_ReturnAddress() != (void*)insert_into_tree) return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
 
+	// get current renderable info from stack ( https://github.com/pmrowla/hl2sdk-csgo/blob/master/game/client/clientleafsystem.cpp#L1470 )
 	renderable_info_t* info = *(renderable_info_t**)((std::uintptr_t)_AddressOfReturnAddress() + 0x14);
-	if (info == nullptr || info->renderable == nullptr)
-		return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
+	if (info == nullptr || info->renderable == nullptr) return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
 
+	// check if disabling occulusion for players ( https://github.com/pmrowla/hl2sdk-csgo/blob/master/game/client/clientleafsystem.cpp#L1491 )
 	void* client_unknown = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(info->renderable) - 4);
-	if (client_unknown == nullptr)
-		return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
-
+	if (client_unknown == nullptr) return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
 	player_t* entity = utilities::call_vfunc<player_t*>(client_unknown, 7);
-	if (!entity || !entity->is_player() || !entity->is_alive())
-		return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
+	if (!entity || !entity->is_player() || !entity->is_alive()) return bsp_query_original(ecx, edx, mins, maxs, list, list_max);
 
+	// fix render order, force translucent group ( https://www.unknowncheats.me/forum/2429206-post15.html )
+	// AddRenderablesToRenderLists: https://i.imgur.com/hcg0NB5.png ( https://github.com/pmrowla/hl2sdk-csgo/blob/master/game/client/clientleafsystem.cpp#L2473 )
 	info->flags &= ~0x100;
 	info->flags2 |= 0xc0;
+
+	// extend world space bounds to maximum ( https://github.com/pmrowla/hl2sdk-csgo/blob/master/game/client/clientleafsystem.cpp#L707 )
 	return bsp_query_original(ecx, edx, &world_min, &world_max, list, list_max);
 }

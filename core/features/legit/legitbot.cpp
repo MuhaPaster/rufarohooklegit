@@ -242,12 +242,18 @@ void aimbot::run(c_usercmd* cmd) {
 	if (!active_weapon || !active_weapon->clip1_count())
 		return;
 
-	if (!GetAsyncKeyState(VK_LBUTTON) || !variables::aimbot)
+	if (!GetAsyncKeyState(VK_LBUTTON) || variables::aimbot <= 0)
 		return;
 	
     auto usedfov = variables::fov * 2;
 
-	auto rcs = csgo::local_player->aim_punch_angle() * 2.25f; // note: anything more is wayy to fucking much
+	vec3_t rcs;
+
+	const auto recoil = interfaces::console->get_convar("weapon_recoil_scale");
+	if (variables::aimbot == 3)
+		rcs = csgo::local_player->aim_punch_angle() * recoil->get_float();
+	else
+		rcs = csgo::local_player->aim_punch_angle() * 2.25f; // note: anything more is wayy to fucking much
 
 	if ((cmd->buttons & in_attack)) {
 		auto best_fov = usedfov;
@@ -261,13 +267,12 @@ void aimbot::run(c_usercmd* cmd) {
 				|| entity == csgo::local_player
 				|| entity->dormant()
 				|| !entity->is_alive()
-				|| entity->team() == csgo::local_player->team()
+				|| (entity->team() == csgo::local_player->team() && !variables::dangerzone)
 				|| entity->has_gun_game_immunity())
 				continue;
 
-			for (auto bone : { 8, 4, 3, 7, 6, 5 })
-			{
-				auto bone_position = entity->get_bone_position(bone);
+			if (variables::aimbot == 3) {
+				auto bone_position = entity->get_bone_position(8);
 				const auto angle = CalculateRelativeAngle(local_player_eye_position, bone_position, cmd->viewangles + rcs);
 
 				const auto fov = std::hypot(angle.x, angle.y);
@@ -280,13 +285,30 @@ void aimbot::run(c_usercmd* cmd) {
 					best_target = bone_position;
 				}
 			}
+			else {
+				for (auto bone : { 8, 4, 3, 7, 6, 5 })
+				{
+					auto bone_position = entity->get_bone_position(bone);
+					const auto angle = CalculateRelativeAngle(local_player_eye_position, bone_position, cmd->viewangles + rcs);
+
+					const auto fov = std::hypot(angle.x, angle.y);
+					if (fov > best_fov) continue;
+
+					if (!is_visible(entity, local_player_eye_position, bone_position)) continue;
+
+					if (fov < best_fov) {
+						best_fov = fov;
+						best_target = bone_position;
+					}
+				}
+			}
 		}
 
 		if (best_target.IsValid() && !best_target.IsZero()) {
 			static auto last_angles{ cmd->viewangles };
 			static int last_command{};
 
-			const auto can_use_silent = variables::silent && best_fov <= usedfov;
+			const auto can_use_silent = variables::aimbot == 2 && best_fov <= usedfov;
 
 			auto angle = CalculateRelativeAngle(local_player_eye_position, best_target, cmd->viewangles + rcs);
 			auto clamped{ false };
@@ -300,7 +322,7 @@ void aimbot::run(c_usercmd* cmd) {
 			if (last_command < cmd->command_number && !last_angles.IsZero() && can_use_silent)
 				cmd->viewangles = math::calc_angle(local_player_eye_position, best_target);
 
-            if (!variables::silent)
+            if (variables::aimbot == 2)
 			    angle /= 5;
 
 			cmd->viewangles.y += angle.y;

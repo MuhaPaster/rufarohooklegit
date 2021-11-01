@@ -63,7 +63,7 @@ void triggerbot::run(c_usercmd* cmd) {
 
     auto player = reinterpret_cast<player_t*>(entity);
     auto valid_player = [&]() {
-        if (!player || !player->is_alive() || player->dormant() || player->team() == csgo::local_player->team())
+        if (!player || !player->is_alive() || player->dormant() ||  (player->team() == csgo::local_player->team() && !variables::dangerzone))
             return false;
 
         return !(player->has_gun_game_immunity());

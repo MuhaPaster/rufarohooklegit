@@ -106,7 +106,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="core\features\events\events.cpp" />
-    <ClCompile Include="core\features\lagcompensation\backtrack.cpp" />
+    <ClCompile Include="core\features\backtracking\backtrack.cpp" />
     <ClCompile Include="core\features\legit\legitbot.cpp" />
     <ClCompile Include="core\features\legit\triggerbot.cpp" />
     <ClCompile Include="core\features\misc\engine_prediction.cpp" />
@@ -134,7 +134,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\features\features.hpp" />
-    <ClInclude Include="core\features\lagcompensation\backtrack.hpp" />
+    <ClInclude Include="core\features\backtracking\backtrack.hpp" />
     <ClInclude Include="core\features\legit\legitbot.hpp" />
     <ClInclude Include="core\features\legit\triggerbot.hpp" />
     <ClInclude Include="core\features\misc\engine_prediction.hpp" />

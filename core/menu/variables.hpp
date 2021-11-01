@@ -9,9 +9,8 @@ namespace variables {
 	inline bool backtrack_chams = false;
 	inline int antiaim = 0;
 	inline int crosshair = 0;
-	inline bool aimbot = false;
+	inline int aimbot = 0;
+	inline bool dangerzone = false;
 	inline int fov = 0;
-	inline int targetting = 0;
-	inline bool silent = false;
 	inline bool darkmode = false;
 }

@@ -1,10 +1,13 @@
 #pragma once
 #include "../../dependencies/utilities/csgo.hpp"
 #include "../menu/variables.hpp"
+#include "../menu/menu.hpp"
 
-#include "lagcompensation/backtrack.hpp"
+#include "backtracking/backtrack.hpp"
 #include "legit/triggerbot.hpp"
 #include "legit/legitbot.hpp"
+#include "misc/engine_prediction.hpp"
+
 
 namespace visuals {
 	namespace players {
