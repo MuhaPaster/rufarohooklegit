@@ -56,7 +56,7 @@ void menu::draw() {
 	if (GetAsyncKeyState(VK_INSERT) & 1)
 		menu_locked = !menu_locked;
 
-	static std::string name = "Gamer";
+	static std::string name = "Gaymer";
 	if (csgo::local_player) {
 		player_info_t player_info;
 		interfaces::engine->get_player_info(interfaces::engine->get_local_player(), &player_info);

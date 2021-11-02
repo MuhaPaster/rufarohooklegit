@@ -55,6 +55,15 @@ void visuals::players::chams_run(i_mat_render_context* ctx, const draw_model_sta
 		player_t* player = reinterpret_cast<player_t*>(interfaces::entity_list->get_client_entity(info.entity_index));
 		if (!player || !player->is_alive()) // removed dormancy check (player->dormant())
 			return;
+
+		player_info_t pinfo;
+		interfaces::engine->get_player_info(player->index(), &pinfo);
+		if (!&pinfo) return;
+
+		// do some memeshit
+		color hiddencolor = pinfo.name == pinfo.friendsname ? color(r, g, b, 155) : color(0, 175, 255);
+		color visiblecolor = pinfo.name == pinfo.friendsname ? color(r, g, b, 155) : color(0, 100, 255);
+
 		if (player->has_gun_game_immunity()) {
 			override_material(false, false, color(255, 255, 255, 100));
 			draw_model_execute_original(interfaces::model_render, 0, ctx, state, info, matrix);
@@ -89,9 +98,9 @@ void visuals::players::chams_run(i_mat_render_context* ctx, const draw_model_sta
 					}
 				}
 				else {
-					override_material(true, false, color(0, 175, 255));
+					override_material(true, false, hiddencolor);
 					draw_model_execute_original(interfaces::model_render, 0, ctx, state, info, matrix);
-					override_material(false, false, color(0, 100, 255));
+					override_material(false, false, visiblecolor);
 					draw_model_execute_original(interfaces::model_render, 0, ctx, state, info, matrix);
 				}
 			}

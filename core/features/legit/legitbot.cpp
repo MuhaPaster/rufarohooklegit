@@ -6,9 +6,6 @@ vec3_t CalculateRelativeAngle(const vec3_t& source, const vec3_t& destination, v
 	return (angles - view_angles).normalized();
 }
 
-auto pressed = false;
-auto last_pressed = false;
-
 constexpr bool isArmored(int hitGroup, bool helmet) noexcept {
     switch (hitGroup) {
     case hitgroup_head:
@@ -238,15 +235,9 @@ void aimbot::run(c_usercmd* cmd) {
 		return (tr.entity == m_player || tr.flFraction >= 0.99f);
 	};
 
-	if (GetAsyncKeyState(VK_LBUTTON) & 1) {
-		if (!pressed) {
-			pressed = true;
-			last_pressed = true;
-		}
-	}
-	else pressed = false;
-
-	if (!interfaces::engine->is_connected() || !interfaces::engine->is_in_game() || !csgo::local_player || csgo::local_player->next_attack() > interfaces::globals->cur_time || csgo::local_player->is_defusing()) return;
+	const auto client_class = csgo::local_player->client_class();
+	const auto class_ids = client_class->class_id;
+	if (!interfaces::engine->is_connected() || !interfaces::engine->is_in_game() || !csgo::local_player || csgo::local_player->next_attack() > interfaces::globals->cur_time || csgo::local_player->is_defusing() || !client_class) return;
 
     // nigger bool
     interfaces::console->get_convar("cl_ragdoll_gravity")->set_value(300);
@@ -259,22 +250,26 @@ void aimbot::run(c_usercmd* cmd) {
 		return;
 	
     auto usedfov = variables::fov * 2;
-
 	vec3_t rcs;
-
 	const auto recoil = interfaces::console->get_convar("weapon_recoil_scale");
-	if (variables::aimbot == 3)
+	if (variables::aimbot == 3 || variables::aimbot == 4) {
+		cmd->viewangles -= csgo::local_player->aim_punch_angle() * recoil->get_float();
 		rcs = csgo::local_player->aim_punch_angle() * recoil->get_float();
-	else
-		rcs = csgo::local_player->aim_punch_angle() * 2.25f; // note: anything more is wayy to fucking much
+	}
+	else {
+		// fixed rcs on pistols.
+		if (class_ids != class_ids::CWeaponHKP2000 && class_ids != class_ids::CWeaponP250 && class_ids != class_ids::CDEagle && class_ids != class_ids::CWeaponTec9 && class_ids != class_ids::CWeaponGlock && class_ids != class_ids::CWeaponFiveSeven && class_ids != class_ids::CWeaponElite && class_ids != class_ids::CWeaponUSP)
+			rcs = csgo::local_player->aim_punch_angle() * 2.25f;
+		else
+			rcs = csgo::local_player->aim_punch_angle();
+	}
 
 	if ((cmd->buttons & in_attack)) {
 		auto best_fov = usedfov;
 		vec3_t best_target{};
 		const auto local_player_eye_position = csgo::local_player->get_eye_pos();
 
-		for (auto i = 1; i <= interfaces::globals->max_clients; i++)
-		{
+		for (auto i = 1; i <= interfaces::globals->max_clients; i++) {
 			auto entity = reinterpret_cast<player_t*>(interfaces::entity_list->get_client_entity(i));
 			if (!entity
 				|| entity == csgo::local_player
@@ -287,31 +282,32 @@ void aimbot::run(c_usercmd* cmd) {
 			if (variables::aimbot == 3 || variables::aimbot == 4) {
 				auto bone_position = entity->get_bone_position(8);
 				const auto angle = CalculateRelativeAngle(local_player_eye_position, bone_position, cmd->viewangles + rcs);
-
 				const auto fov = std::hypot(angle.x, angle.y);
+
 				if (fov > best_fov) continue;
-
 				if (!is_visible(entity, local_player_eye_position, bone_position)) continue;
+				if (fov < best_fov) { best_fov = fov; best_target = bone_position; }
 
-				if (fov < best_fov) {
-					best_fov = fov;
-					best_target = bone_position;
+				if (variables::aimbot == 4 && !(cmd->buttons & in_attack)) {
+					if (65 * 1.5 < return_hitchance(csgo::local_player) && angle != vec3_t(0, 0, 0) && best_fov / 10 <= usedfov) {
+						csgo::local_player->set_angles(angle);
+						cmd->viewangles = angle;
+						math::normalize_view(cmd->viewangles);
+						cmd->buttons |= in_attack;
+						csgo::local_player->set_angles(cmd->viewangles);
+						return;
+					}
 				}
 			}
 			else {
 				for (auto bone : { 8, 4, 3, 7, 6, 5 }) {
 					auto bone_position = entity->get_bone_position(bone);
 					const auto angle = CalculateRelativeAngle(local_player_eye_position, bone_position, cmd->viewangles + rcs);
-
 					const auto fov = std::hypot(angle.x, angle.y);
+
 					if (fov > best_fov) continue;
-
 					if (!is_visible(entity, local_player_eye_position, bone_position)) continue;
-
-					if (fov < best_fov) {
-						best_fov = fov;
-						best_target = bone_position;
-					}
+					if (fov < best_fov) { best_fov = fov; best_target = bone_position; }
 				}
 			}
 		}
@@ -331,35 +327,21 @@ void aimbot::run(c_usercmd* cmd) {
 				clamped = true;
 			}
 
-			if (last_command < cmd->command_number && !last_angles.IsZero() && can_use_silent)
-				cmd->viewangles = math::calc_angle(local_player_eye_position, best_target);
+			// omg i love silent aim
+			if (last_command < cmd->command_number && !last_angles.IsZero() && can_use_silent) cmd->viewangles = math::calc_angle(local_player_eye_position, best_target);
 
-            if (variables::aimbot == 1)
-			    angle /= 6.25;
-
+			// smoothing
+            if (variables::aimbot == 1) angle /= 6.25;
+			
+			// set view angles
 			cmd->viewangles.y += angle.y;
 			cmd->viewangles.x += angle.x;
 
-			if (!can_use_silent)
-				interfaces::engine->set_view_angles(cmd->viewangles);;
-
-			if (clamped)
-				cmd->buttons &= ~in_attack;
-
-			if (clamped)
-				last_angles = cmd->viewangles;
-			else
-				last_angles = vec3_t();
-
-			if (variables::aimbot == 4 && !(cmd->buttons & in_attack)) {
-				if (65 * 1.5 < return_hitchance(csgo::local_player) && angle != vec3_t(0, 0, 0) && best_fov / 10 <= usedfov) {
-					csgo::local_player->set_angles(angle);
-					cmd->viewangles = angle;
-					math::normalize_view(cmd->viewangles);
-					cmd->buttons |= in_attack;
-					csgo::local_player->set_angles(cmd->viewangles);
-				}
-			}
+			if (!can_use_silent) interfaces::engine->set_view_angles(cmd->viewangles);;
+			if (clamped) cmd->buttons &= ~in_attack;
+			
+			if (clamped) last_angles = cmd->viewangles;
+			else last_angles = vec3_t();
 
 			static auto max_time = .0f;
 			static auto can_reset_auto_delay_time = true;
